@@ -166,7 +166,7 @@ input[type="number"]:focus { border-color: var(--accent); }
 /* ── metrics row ── */
 .metrics {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
   gap: 10px;
 }
 .metric {
@@ -179,8 +179,17 @@ input[type="number"]:focus { border-color: var(--accent); }
 .metric-label { font-size: 0.6rem; color: var(--muted); margin-bottom: 2px; }
 .metric-value { font-family: var(--mono); font-size: 1.3rem; font-weight: 500; color: var(--accent2); }
 .metric-unit { font-size: 0.6rem; color: var(--muted); margin-top: 1px; }
-.metric.highlight { border-color: var(--accent); background: #3D2510; }
-.metric.highlight .metric-value { color: var(--success); font-size: 1.6rem; }
+.metric.strong  { border-color: #6DBF82; background: #1a3320; }
+.metric.strong  .metric-value { color: #6DBF82; font-size: 1rem; }
+.metric.ok      { border-color: #D4832A; background: #3D2510; }
+.metric.ok      .metric-value { color: #F0A84C; font-size: 1rem; }
+.metric.weak    { border-color: #C0392B; background: #3a1010; }
+.metric.weak    .metric-value { color: #e74c3c; font-size: 1rem; }
+.metric.highlight { border-color: #6DBF82; background: #1a3320; }
+.metric.highlight .metric-value { color: #6DBF82; font-size: 1.6rem; }
+.metric.highlight .metric-label { color: #4a9962; }
+.metric.highlight .metric-unit  { color: #4a9962; }
+.strength-hint  { font-size: 0.6rem; color: var(--muted); margin-top: 4px; line-height: 1.4; }
 
 /* ── table ── */
 .table-wrap {
@@ -310,7 +319,22 @@ td:last-child { font-family: var(--mono); color: var(--accent2); }
       <p style="font-size:0.7rem;color:var(--muted);margin-top:8px;">ค้ำทแยง ≈ √(กว้าง²+สูง²) ÷ 2 ต่อเส้น</p>
     </div>
 
-    <!-- ขนาดไม้แนะนำ -->
+    <!-- ไม้ค้ำมุม -->
+    <div class="section">
+      <div class="section-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 21V8l7-5 7 5v13"/><path d="M3 21h18"/><path d="M3 8h4v6H3z"/></svg>
+        ไม้ค้ำมุม (Corner Brace)
+      </div>
+      <div class="grid2">
+        <div>
+          <label>ขนาดค้ำมุม (ซม.)</label>
+          <input type="number" id="cornerSize" value="0" min="0" max="30" />
+        </div>
+        <div style="display:flex;align-items:flex-end;padding-bottom:2px;">
+          <p style="font-size:0.65rem;color:var(--muted);line-height:1.5;">ติดทุก 4 มุม<br/>แต่ละมุมใช้ไม้ 2 ท่อน ยาว = ขนาดค้ำมุม</p>
+        </div>
+      </div>
+    </div>
     <div class="section">
       <div class="section-title">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -382,7 +406,7 @@ td:last-child { font-family: var(--mono); color: var(--accent2); }
 </div>
 
 <script>
-const ids = ['width','height','woodLen','price','hBrace','vBrace','dBrace'];
+const ids = ['width','height','woodLen','price','hBrace','vBrace','dBrace','cornerSize'];
 ids.forEach(id => document.getElementById(id).addEventListener('input', update));
 document.querySelectorAll('.size-card').forEach(c => {
   c.addEventListener('click', () => {
@@ -399,6 +423,7 @@ function update() {
   const hB = parseInt(document.getElementById('hBrace').value) || 0;
   const vB = parseInt(document.getElementById('vBrace').value) || 0;
   const dB = parseInt(document.getElementById('dBrace').value) || 0;
+  const cS = parseFloat(document.getElementById('cornerSize').value) || 0;
   const diagLen = Math.round(Math.sqrt(W*W + H*H) / 2);
 
   const parts = [
@@ -410,6 +435,7 @@ function update() {
   if (hB > 0) parts.push({ name: 'ค้ำแนวนอน', len: W, qty: hB });
   if (vB > 0) parts.push({ name: 'ค้ำแนวตั้ง', len: H, qty: vB });
   if (dB > 0) parts.push({ name: 'ค้ำทแยง', len: diagLen, qty: dB });
+  if (cS > 0) parts.push({ name: 'ค้ำมุม (4 มุม × 2)', len: cS, qty: 8 });
 
   const totalCm = parts.reduce((s, p) => s + p.len * p.qty, 0);
   const woodLenCm = woodLen * 100;
@@ -433,6 +459,7 @@ function update() {
       <div class="metric-value">${totalCost.toLocaleString()}</div>
       <div class="metric-unit">บาท</div>
     </div>
+    ${strengthCard(W, H, hB, vB, dB, cS)}
   `;
 
   let rows = parts.map(p => `
@@ -447,10 +474,10 @@ function update() {
     <tr class="waste-row"><td colspan="3">เศษไม้ที่เหลือ</td><td>${waste} ซม.</td></tr>
   `;
   document.getElementById('tbody').innerHTML = rows;
-  drawDiagram(W, H, hB, vB, dB);
+  drawDiagram(W, H, hB, vB, dB, cS);
 }
 
-function drawDiagram(W, H, hB, vB, dB) {
+function drawDiagram(W, H, hB, vB, dB, cS) {
   const pad = 50, vw = 520, vh = 340;
   const maxW = vw - pad*2, maxH = vh - pad*2;
   const scale = Math.min(maxW / (W||1), maxH / (H||1));
@@ -458,7 +485,7 @@ function drawDiagram(W, H, hB, vB, dB) {
   const dh = Math.round((H||70)*scale);
   const ox = Math.round((vw-dw)/2);
   const oy = Math.round((vh-dh)/2);
-  const sc = '#D4832A', bc = '#F0A84C', dc = '#6DBF82';
+  const sc = '#D4832A', bc = '#F0A84C', dc = '#6DBF82', cc = '#A78BFA';
   let s = '';
   s += `<rect x="${ox}" y="${oy}" width="${dw}" height="${dh}" fill="none" stroke="${sc}" stroke-width="6" stroke-linejoin="round"/>`;
   for (let i=1;i<=hB;i++) {
@@ -471,12 +498,68 @@ function drawDiagram(W, H, hB, vB, dB) {
   }
   if (dB>0) s+=`<line x1="${ox}" y1="${oy}" x2="${ox+dw}" y2="${oy+dh}" stroke="${dc}" stroke-width="3" stroke-dasharray="5,4" opacity="0.85"/>`;
   if (dB>1) s+=`<line x1="${ox+dw}" y1="${oy}" x2="${ox}" y2="${oy+dh}" stroke="${dc}" stroke-width="3" stroke-dasharray="5,4" opacity="0.85"/>`;
+
+  // ค้ำมุม: สามเหลี่ยมที่แต่ละมุม
+  if (cS > 0) {
+    const cs = Math.round(cS * scale);
+    const corners = [
+      [ox, oy, cs, cs, 1, 1],           // top-left
+      [ox+dw, oy, -cs, cs, -1, 1],      // top-right
+      [ox, oy+dh, cs, -cs, 1, -1],      // bottom-left
+      [ox+dw, oy+dh, -cs, -cs, -1, -1], // bottom-right
+    ];
+    corners.forEach(([cx, cy, dx, dy]) => {
+      s += `<polygon points="${cx},${cy} ${cx+dx},${cy} ${cx},${cy+dy}"
+        fill="${cc}" fill-opacity="0.25" stroke="${cc}" stroke-width="2"/>`;
+    });
+  }
+
   s+=`<text x="${ox+dw/2}" y="${oy-10}" text-anchor="middle" fill="#A08060" font-size="12" font-family="Sarabun,sans-serif">${W||'—'} ซม.</text>`;
   s+=`<text x="${ox+dw+10}" y="${oy+dh/2+5}" fill="#A08060" font-size="12" font-family="Sarabun,sans-serif">${H||'—'} ซม.</text>`;
   [[ox,oy],[ox+dw,oy],[ox,oy+dh],[ox+dw,oy+dh]].forEach(([cx,cy])=>{
     s+=`<circle cx="${cx}" cy="${cy}" r="5" fill="${sc}"/>`;
   });
   document.getElementById('diagram').innerHTML = s;
+}
+
+function strengthCard(W, H, hB, vB, dB, cS) {
+  if (!W || !H) return '';
+  const maxUnsupH = W / (hB + 1);
+  const maxUnsupV = H / (vB + 1);
+  const ratio = Math.max(W, H) / Math.min(W, H);
+  const minSide = Math.min(W, H);
+
+  // ค้ำมุมช่วยป้องกันการบิดได้ถ้าขนาด >= 10% ของด้านสั้น
+  const cornerEffective = cS > 0 && cS >= minSide * 0.10;
+  const cornerTooSmall  = cS > 0 && cS < minSide * 0.10;
+
+  // ต้องการค้ำทแยงถ้า สัดส่วนเกิน 1.5:1 และไม่มีค้ำทแยง และค้ำมุมไม่พอ
+  const needDiag = ratio > 1.5 && dB === 0 && !cornerEffective;
+
+  let issues = [];
+  if (maxUnsupH > 80)  issues.push(`ด้านบน/ล่างช่วงยาว ${Math.round(maxUnsupH)} ซม. ควรเพิ่มค้ำแนวนอน`);
+  if (maxUnsupV > 80)  issues.push(`ด้านซ้าย/ขวาช่วงยาว ${Math.round(maxUnsupV)} ซม. ควรเพิ่มค้ำแนวตั้ง`);
+  if (needDiag)        issues.push(`สัดส่วน ${ratio.toFixed(1)}:1 ควรเพิ่มค้ำทแยงหรือค้ำมุมป้องกันบิด`);
+  if (cornerTooSmall)  issues.push(`ค้ำมุม ${cS} ซม. เล็กเกินไป ควรใช้ ≥ ${Math.ceil(minSide*0.10)} ซม.`);
+
+  let cls, label;
+  if (issues.length === 0)      { cls = 'strong'; label = '✦ แข็งแรง'; }
+  else if (issues.length === 1) { cls = 'ok';     label = '◈ พอใช้'; }
+  else                          { cls = 'weak';   label = '⚠ ควรเพิ่มค้ำ'; }
+
+  // hint: ถ้าค้ำมุมช่วยได้ให้บอกด้วย
+  let hintText = issues.length > 0 ? issues[0] : 'โครงนี้รับแรงได้ดี';
+  if (cornerEffective && issues.length === 0)
+    hintText = `ค้ำมุม ${cS} ซม. ช่วยล็อกมุมได้ดี`;
+
+  const hintColor = issues.length > 0 ? '' : 'color:#6DBF82';
+  const hint = `<div class="strength-hint" style="${hintColor}">${hintText}</div>`;
+
+  return `<div class="metric ${cls}">
+    <div class="metric-label">ความแข็งแรง</div>
+    <div class="metric-value">${label}</div>
+    ${hint}
+  </div>`;
 }
 
 update();
